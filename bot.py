@@ -48,8 +48,8 @@ async def start_handler(c, m):
         await Data.insert_one({'id': user_id})
 
     button = [[        
-        InlineKeyboardButton('Updates', url='https://t.me/mkn_bots_updates'),
-        InlineKeyboardButton('Support', url='https://t.me/MKN_BOTZ_DISCUSSION_GROUP')
+        InlineKeyboardButton('Updates', url='https://t.me/stdbots'),
+        InlineKeyboardButton('Support', url='https://t.me/+l-VfnIVQ4YFlODY9')
     ]]
 
     return await m.reply_text(
