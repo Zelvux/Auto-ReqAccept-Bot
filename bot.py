@@ -1,12 +1,18 @@
 import asyncio
-asyncio.set_event_loop(asyncio.new_event_loop())  # ✅ event loop fix
+import time
+import datetime
+
+# ✅ Proper event loop fix (better version)
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
 from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid
 from pyrogram import Client, filters
 from pyrogram.types import *
 from motor.motor_asyncio import AsyncIOMotorClient  
 from os import environ as env
-import datetime, time
 
 
 ACCEPTED_TEXT = "Hey {user}\n\nYour Request For {chat} Is Accepted ✅"
@@ -16,24 +22,28 @@ API_ID = int(env.get('API_ID'))
 API_HASH = env.get('API_HASH')
 BOT_TOKEN = env.get('BOT_TOKEN')
 DB_URL = env.get('DB_URL')
-ADMINS = int(env.get('ADMINS', '0'))  # ✅ safe default
+ADMINS = int(env.get('ADMINS', '0'))
 
+# ✅ MongoDB init safe
 Dbclient = AsyncIOMotorClient(DB_URL)
 Cluster = Dbclient['Cluster0']
 Data = Cluster['users']
 
+# ✅ FINAL FIXED CLIENT
 Bot = Client(
-    name='AutoAcceptBot',
+    "my_bot",   # 🔥 name change (important)
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
-    in_memory=True   # ✅ session fix (msg_id error fix)
+    in_memory=True,
+    workers=1
 )
 
-       
+
 @Bot.on_message(filters.command("start") & filters.private)                    
 async def start_handler(c, m):
     user_id = m.from_user.id
+
     if not await Data.find_one({'id': user_id}):
         await Data.insert_one({'id': user_id})
 
@@ -57,7 +67,7 @@ async def broadcast(c, m):
         return await m.reply(f"Total Users: {total_users}")
 
     if not m.reply_to_message:
-        return await m.reply("Reply to a message to broadcast ❌")  # ✅ safety
+        return await m.reply("Reply to a message to broadcast ❌")
 
     b_msg = m.reply_to_message
     sts = await m.reply_text("Broadcasting your messages...")
@@ -93,7 +103,7 @@ async def broadcast(c, m):
             await Data.delete_many({'id': user_id})
             failed += 1
 
-        except Exception as e:
+        except Exception:
             failed += 1
 
         done += 1
@@ -105,13 +115,13 @@ async def broadcast(c, m):
                 f"Completed: {done} / {total_users}\n"
                 f"Success: {success}\n"
                 f"Failed: {failed}"
-            )    
+            )
 
     time_taken = datetime.timedelta(seconds=int(time.time() - start_time))
 
     await sts.delete()
 
-    await m.reply_text(   # ✅ FIX (message → m)
+    await m.reply_text(
         f"Broadcast Completed:\n"
         f"Completed in {time_taken} seconds.\n\n"
         f"Total Users {total_users}\n"
@@ -121,7 +131,7 @@ async def broadcast(c, m):
         quote=True
     )
 
-  
+
 @Bot.on_chat_join_request()
 async def req_accept(c, m):
     user_id = m.from_user.id
@@ -142,6 +152,9 @@ async def req_accept(c, m):
         )
     except Exception as e:
         print(e)
-   
 
-Bot.run()
+
+# ✅ Clean start (important)
+if __name__ == "__main__":
+    print("✅ Bot Started Successfully")
+    Bot.run()
